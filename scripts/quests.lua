@@ -2,11 +2,12 @@ local UEHelpers = require("UEHelpers")
 
 local M = {}
 M.AlwaysCompleteQuests = {
-    ["/Game/Gameplay/Quests/HUB1/QUEST_HUB1_1005_CheckinFrontDesk.QUEST_HUB1_1005_CheckinFrontDesk"] = true,
+    --["/Game/Gameplay/Quests/HUB1/QUEST_HUB1_1005_CheckinFrontDesk.QUEST_HUB1_1005_CheckinFrontDesk"] = true,
     --["/Game/Gameplay/Quests/HUB1/QUEST_HUB1_1020_EscapeTheClosetWrapper.QUEST_HUB1_1020_EscapeTheClosetWrapper"] = true,
-    ["/Game/Gameplay/Quests/HUB1/QUEST_HUB1_1030_EnterBuilding.QUEST_HUB1_1030_EnterBuilding"] = true,
+    --["/Game/Gameplay/Quests/HUB1/QUEST_HUB1_1030_EnterBuilding.QUEST_HUB1_1030_EnterBuilding"] = true,
     --["/Game/Gameplay/Quests/HUB1/QUEST_HUB1_1040_InternResume.QUEST_HUB1_1040_InternResume"] = true,
     --["/Game/Gameplay/Quests/HUB1/QUEST_HUB1_2070_ReturnToTruman.QUEST_HUB1_2070_ReturnToTruman"] = true,
+    --["/Game/Gameplay/Quests/HUB1/QUEST_HUB1_1250_BridgeToHQ.QUEST_HUB1_1250_BridgeToHQ"] = true,
 }
 
 function M.get_quest_status(quest_name)

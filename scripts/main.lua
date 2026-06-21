@@ -4,7 +4,6 @@ local quests = require("quests")
 print("[PS2RandomizerMod] Mod Loaded\n")
 
 local new_game = false;
-local first_load = true;
 local MConnUnlocked = false;
 
 -- These Classes receive BeginPlay calls near the end of a level loading so code can run assuming most items are loaded
@@ -14,6 +13,8 @@ local late_level_actors = {
     ["HQIN_C"] = true, 
     ["LOBO_C"] = true,
     ["QUAR_C"] = true,
+    ["QAEX_C"] = true,
+    ["HUB2_C"] = true,
 }
 
 -- These Classes receive
@@ -30,6 +31,35 @@ local colu_door_actors = {
     ["GMO_GEN_COLU_MaligulaDoor_C"] = true,
 }
 
+local hqin_ft_destinations = { 
+    "/Game/Gameplay/FastTravelData/UIData/RealWorld/UIData_FTRW_HQIN_Truman.UIData_FTRW_HQIN_Truman",
+    "/Game/Gameplay/FastTravelData/UIData/RealWorld/UIData_FTRW_HQIN_Sasha.UIData_FTRW_HQIN_Sasha",
+    "/Game/Gameplay/FastTravelData/UIData/RealWorld/UIData_FTRW_HQIN_Intern.UIData_FTRW_HQIN_Intern",
+    "/Game/Gameplay/FastTravelData/UIData/RealWorld/UIData_FTRW_HQIN_Atrium.UIData_FTRW_HQIN_Atrium",
+}
+
+local quar_ft_destinations = {
+    "/Game/Gameplay/FastTravelData/UIData/RealWorld/UIData_FTRW_PIC.UIData_FTRW_PIC",
+    "/Game/Gameplay/FastTravelData/UIData/RealWorld/UIData_FTRW_OttoLab.UIData_FTRW_OttoLab",
+    "/Game/Gameplay/FastTravelData/UIData/RealWorld/UIData_FTRW_QUAR.UIData_FTRW_QUAR",
+}
+
+local qaex_ft_destinations = {
+    "/Game/Gameplay/FastTravelData/UIData/RealWorld/UIData_FTRW_QAEX.UIData_FTRW_QAEX",
+}
+
+local hub2_ft_destinations = {
+    "/Game/Gameplay/FastTravelData/UIData/RealWorld/UIData_FTRW_Heptadome.UIData_FTRW_Heptadome",
+}
+
+local level_complete_redirect_dests = {
+    ["/Game/Gameplay/StartPoints/QAEX/START_QAEX_FORGReturn.START_QAEX_FORGReturn"] = true,
+    ["/Game/Gameplay/StartPoints/HUB2/START_HUB2_BobzHouse.START_HUB2_BobzHouse"] = true,
+    ["/Game/Gameplay/StartPoints/HUB2/START_HUB2_CassieHouse.START_HUB2_CassieHouse"] = true,
+    ["/Game/Gameplay/StartPoints/HUB2/START_HUB2_GristolHeptadome.START_HUB2_GristolHeptadome"] = true,
+    ["/Game/Gameplay/StartPoints/HUB2/START_HUB2_Lathe.START_HUB2_Lathe"] = true,
+}
+
 -- Using the Actor class names as level names to make checking/switching levels easier
 local current_level = "QUAR_C"
 
@@ -44,22 +74,16 @@ function UnlockTumbler()
 end
 
 RegisterBeginPlayPreHook(function(Actor)
-    if first_load then
-        --- @class P2Quest
-        local root_quest = StaticFindObject("/Game/Gameplay/Quests/HUB1/QUEST_HUB1_0000_ROOT.QUEST_HUB1_0000_ROOT")
-        if root_quest:IsValid() then
-            root_quest.m_bSubQuestsSequential = false
-            first_load = false
-        end
-    end
-
     --print(string.format("BeginPlay: %s\n", Actor:get():GetClass():GetFName():ToString()))
     --print(string.format("BeginPlay: %s\n", Actor:get():GetFullName()))
-    local ClassName = Actor:get():GetClass():GetFName():ToString()
+    --print(string.format("BeginPlay: %s\n", Actor:get():GetFName():ToString()))
+    local actor_class_name = Actor:get():GetClass():GetFName():ToString()
+    local actor_full_name = Actor:get():GetFullName()
 
-    if late_level_actors[ClassName] == true then
+
+    if late_level_actors[actor_class_name] == true then
         -- Track current level for level specific control
-        current_level = ClassName
+        current_level = actor_class_name
         print(string.format("current_level changed to : %s\n", current_level))
 
         local blueprint_library = StaticFindObject("/Script/Psychonauts2.Default__P2BlueprintLibrary")
@@ -117,23 +141,83 @@ RegisterBeginPlayPreHook(function(Actor)
                 print ("Couldn't find Mental Connection Powerkey")
                 return
             end
-            if ClassName == "COLU_C" then
+            if actor_class_name == "COLU_C" then
                 blueprint_library:AddToRazInventory(level_script_actor, PK_Mconn, 1)
             else
                 --blueprint_library:RemoveFromRazInventory(level_script_actor, PK_Mconn, 1)
             end
         end
 
-        -- When entering HQIN remove the quest check from the Brain Tumbler
-        if ClassName == "HQIN_C" then
+        if actor_class_name == "HQIN_C" then
+            -- When entering HQIN remove the quest check from the Brain Tumbler
             UnlockTumbler()
+            -- Enable all HQIN fast travel entry points
+            for _, ele in pairs(hqin_ft_destinations) do
+                local dest_obj = StaticFindObject(ele)
+                if dest_obj:IsValid() then
+                    dest_obj.Destinations:ForEach(function (_, elem)
+                        local destination = elem:get()
+                        destination.bNoVisitRequired = true
+                        elem:set(destination)
+                    end)
+                else
+                    print(string.format("Couldn't find Object for %s\n", ele))
+                end
+            end
         end
-    end
 
-    -- When entering COLU make all doors invisible
-    if colu_door_actors[ClassName] == true then
+        if actor_class_name == "QUAR_C" then
+            -- Enable all QUAR fast travel entry points
+            for _, ele in pairs(quar_ft_destinations) do
+                local dest_obj = StaticFindObject(ele)
+                if dest_obj:IsValid() then
+                    dest_obj.Destinations:ForEach(function (_, elem)
+                        local destination = elem:get()
+                        destination.bNoVisitRequired = true
+                        elem:set(destination)
+                    end)
+                else
+                    print(string.format("Couldn't find Object for %s\n", ele))
+                end
+            end
+        end
+
+        if actor_class_name == "QAEX_C" then
+            -- Enable all QAEX fast travel entry points
+            for _, ele in pairs(qaex_ft_destinations) do
+                local dest_obj = StaticFindObject(ele)
+                if dest_obj:IsValid() then
+                    dest_obj.Destinations:ForEach(function (_, elem)
+                        local destination = elem:get()
+                        destination.bNoVisitRequired = true
+                        elem:set(destination)
+                    end)
+                else
+                    print(string.format("Couldn't find Object for %s\n", ele))
+                end
+            end
+        end
+
+        if actor_class_name == "HUB2_C" then
+            -- Enable all HUB2 fast travel entry points
+            for _, ele in pairs(hub2_ft_destinations) do
+                local dest_obj = StaticFindObject(ele)
+                if dest_obj:IsValid() then
+                    dest_obj.Destinations:ForEach(function (_, elem)
+                        local destination = elem:get()
+                        destination.bNoVisitRequired = true
+                        elem:set(destination)
+                    end)
+                else
+                    print(string.format("Couldn't find Object for %s\n", ele))
+                end
+            end
+        end
+
+    -- When entering COLU make all doors (in)visible
+    elseif colu_door_actors[actor_class_name] == true then
         -- Handle FordDoor differently
-        if ClassName == "GMO_GEN_COLU_FordDoor_C" then
+        if actor_class_name == "GMO_GEN_COLU_FordDoor_C" then
             -- Make door visible
             RegisterHook("/Game/Gameplay/LevelSpecific/COLU/GMO_GEN_COLU_FordDoor.GMO_GEN_COLU_FordDoor_C:HasVisitedFordBrain", function (context, bVisitedParam)
                 bVisitedParam:set(true)
@@ -154,7 +238,7 @@ RegisterBeginPlayPreHook(function(Actor)
             end
 
         -- Handle HollisDoor differently
-        elseif ClassName == "GMO_GEN_COLU_HollisDoor_C" then
+        elseif actor_class_name == "GMO_GEN_COLU_HollisDoor_C" then
             -- Lock/Unlock Destinations
             local holl_ft_dest = StaticFindObject("/Game/Gameplay/FastTravelData/UIData/COLU/UIData_FTCOLU_HOLL.UIData_FTCOLU_HOLL")
             if holl_ft_dest:IsValid() then
@@ -176,7 +260,6 @@ RegisterBeginPlayPreHook(function(Actor)
                 local locked_cutscene = Actor:get():GetComponentByClass(locked_cutscene_class)
                 if locked_cutscene:IsValid() then
                     local kismet_system = UEHelpers.GetKismetSystemLibrary()
-                    local unlock_completed_quest = kismet_system:Conv_SoftObjectReferenceToString(locked_cutscene.UnlockCompletedQuest):ToString()
                     local replacement_completed_quest = kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath("None"))
                     --local replacement_completed_quest = kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath("/Game/Gameplay/Quests/HUB1/QUEST_HUB1_4010_Postgame.QUEST_HUB1_4010_Postgame"))
                     locked_cutscene.UnlockCompletedQuest = replacement_completed_quest
@@ -185,13 +268,36 @@ RegisterBeginPlayPreHook(function(Actor)
                     locked_cutscene.UnlockActiveQuest = replacement_active_quest
 
                 else
-                    print(string.format("Actor component was invalid for %s\n", ClassName))
+                    print(string.format("Actor component was invalid for %s\n", actor_class_name))
                 end
             else
                 print("Could not find locked cutscene class")
             end
         end
+
+    -- Enable Smelling Salts For MALI
+    elseif actor_full_name == "P2WorldSettings /Game/Maps/MALI/MALI.MALI:PersistentLevel.P2WorldSettings" then
+        Actor:get().bSmellingSaltsNoLevelExitOverride = false
+        -- Disable the long cutscene as well (still works just takes longer without this)
+        local kismet_system = UEHelpers.GetKismetSystemLibrary()
+        local none_soft = kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath("None"))
+        Actor:get().SmellingSaltsLevelSequenceOverride = none_soft
+
+    -- Force unlock storage room door to prevent soft lock
+    elseif actor_full_name == "GMO_HQIN_StorageDoor_Exit_C /Game/Maps/HUB1/HQIN_STORAGE_ART.HQIN_STORAGE_ART:PersistentLevel.GMO_HQIN_StorageDoor_Exit_3" then
+        local door_quest_status = StaticFindObject("/Game/Maps/HUB1/HQIN_STORAGE_ART.HQIN_STORAGE_ART:PersistentLevel.GMO_HQIN_StorageDoor_Exit_3.COMP_Interactible.P2Condition_QuestStatus_0")
+        if door_quest_status:IsValid() then
+            --[[
+            local kismet_system = UEHelpers.GetKismetSystemLibrary()
+            local none_soft = kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath("None"))
+            door_quest_status.m_rQuest = none_soft
+            ]]
+            door_quest_status.m_bInvertCondition = true
+        else
+            print("Couldn't find storage room door quest status\n")
+        end
     end
+
 end)
 
 function HookedIsQuestCompleteNew(Context, WorldContextObjectParam, rQuestParam)
@@ -218,19 +324,24 @@ end
 
 function HookedP2OpenLevel(Context, WorldContextParam, LevelParam, CutscenesToPreloadParam, DestinationPlayerStartParam, 
     FadeParamsParam, bOverrideLoadingLevelParam, LoadingLevelParam, bSaveGameParam, SaveAutoBackupNameParm, bRestoreRazToFullHealthParam)
+    local kismet_system = UEHelpers.GetKismetSystemLibrary()
     -- LoadingLevel 2 is NewGame
     if LoadingLevelParam:Get() == 2 then
         -- Replace the target map for NewGame loads to be HQIN
-        local kismet_system = UEHelpers.GetKismetSystemLibrary()
         --local HQINMapSoft = kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath("/Game/Maps/HQIN/HQIN.HQIN"))
         local QUARMapSoft = kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath("/Game/Maps/QUAR/QUAR.QUAR"))
         --local DefaultStartSoft = kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath("/Game/Gameplay/StartPoints/HQIN/START_HQIN_Default.START_HQIN_Default"))
         local DefaultStartSoft = kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath("/Game/Gameplay/StartPoints/QUAR/START_QUAR_FromHQIN.START_QUAR_FromHQIN"))
         LevelParam:Set(QUARMapSoft)
-        --LevelParam:Set(QUARMapSoft)
+        --LevelParam:Set(HQINMapSoft)
         DestinationPlayerStartParam:Set(DefaultStartSoft)
         -- Set NewGame flag to allow BeginPlay hooks to handle initial game setup
         new_game = true;
+    elseif level_complete_redirect_dests[DestinationPlayerStartParam:get():GetObjectID():GetAssetPathName():ToString()] == true then
+        local HQINMapSoft = kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath("/Game/Maps/HQIN/HQIN.HQIN"))
+        local DefaultStartSoft = kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath("/Game/Gameplay/StartPoints/HQIN/START_HQIN_Default.START_HQIN_Default"))
+        LevelParam:Set(HQINMapSoft)
+        DestinationPlayerStartParam:Set(DefaultStartSoft)
     end
 end
 
@@ -241,6 +352,24 @@ RegisterHook("/Script/Psychonauts2.P2BlueprintLibrary:IsQuestActiveNew", HookedI
 
 -- Keybinds
 ----------------
+
+-- Add TimeBubble
+RegisterKeyBind(Key.F2, {ModifierKey.CONTROL}, function()
+    local blueprint_library = StaticFindObject("/Script/Psychonauts2.Default__P2BlueprintLibrary")
+    if not blueprint_library:IsValid() then
+        print("No instance of class 'Default__P2BlueprintLibrary' was found.")
+        return
+    end
+    local persistent_level = UEHelpers:GetPersistentLevel()
+    local level_script_actor = persistent_level.LevelScriptActor
+
+    local time_bubble = StaticFindObject("/Game/Gameplay/Inventory/Powers/POWERKEY_TimeBubble.POWERKEY_TimeBubble")
+    if not time_bubble:IsValid() then
+        print ("Couldn't find Thought Bubble Powerkey")
+        return
+    end
+    blueprint_library:AddToRazInventory(level_script_actor, time_bubble, 1)
+end)
 
 -- Sanity Check of Hub quest statuses
 RegisterKeyBind(Key.F3, {ModifierKey.CONTROL}, function()

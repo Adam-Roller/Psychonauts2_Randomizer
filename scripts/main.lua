@@ -305,6 +305,12 @@ function HookedIsQuestCompleteNew(Context, WorldContextObjectParam, rQuestParam)
     -- Some quests should always be considered complete
     if quests.AlwaysCompleteQuests[rQuest_AssetPathName] == true then
         return true
+
+    -- Access to Mailroom
+    elseif WorldContextObjectParam:get():GetFName():ToString() == "GMO_HQIN_DoorScanner_AtriumToMailroom" then
+        return true
+
+    -- Access to QUAR Lobby
     elseif WorldContextObjectParam:get():GetFName():ToString() == "GMO_HQIN_DoorScanner_AtriumExitToLobby" then
         return true
     end

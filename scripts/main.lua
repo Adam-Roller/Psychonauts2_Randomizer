@@ -53,6 +53,7 @@ local hub2_ft_destinations = {
 }
 
 local level_complete_redirect_dests = {
+    ["/Game/Gameplay/StartPoints/HOLL/START_HOLL_REAL_State2.START_HOLL_REAL_State2"] = true,
     ["/Game/Gameplay/StartPoints/QAEX/START_QAEX_FORGReturn.START_QAEX_FORGReturn"] = true,
     ["/Game/Gameplay/StartPoints/HUB2/START_HUB2_BobzHouse.START_HUB2_BobzHouse"] = true,
     ["/Game/Gameplay/StartPoints/HUB2/START_HUB2_CassieHouse.START_HUB2_CassieHouse"] = true,
@@ -345,7 +346,7 @@ function HookedP2OpenLevel(Context, WorldContextParam, LevelParam, CutscenesToPr
         new_game = true;
     elseif level_complete_redirect_dests[DestinationPlayerStartParam:get():GetObjectID():GetAssetPathName():ToString()] == true then
         local HQINMapSoft = kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath("/Game/Maps/HQIN/HQIN.HQIN"))
-        local DefaultStartSoft = kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath("/Game/Gameplay/StartPoints/HQIN/START_HQIN_Default.START_HQIN_Default"))
+        local DefaultStartSoft = kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath("/Game/Gameplay/StartPoints/HQIN/START_HQIN_SashaLabTumbler.START_HQIN_SashaLabTumbler"))
         LevelParam:Set(HQINMapSoft)
         DestinationPlayerStartParam:Set(DefaultStartSoft)
     end

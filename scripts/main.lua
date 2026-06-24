@@ -5,6 +5,7 @@ print("[PS2RandomizerMod] Mod Loaded\n")
 
 local new_game = false;
 local MConnUnlocked = false;
+local final_boss_unlocked = false;
 
 -- These Classes receive BeginPlay calls near the end of a level loading so code can run assuming most items are loaded
 local late_level_actors = { 
@@ -117,6 +118,14 @@ RegisterBeginPlayPreHook(function(Actor)
                     end
                 end
             end
+
+            -- Add Fast Travel Key
+            local ft_key = StaticFindObject("/Game/Gameplay/Inventory/FastTravel/INV_FTKey.INV_FTKey")
+            if not ft_key:IsValid() then
+                print("Couldn't find Fast Travel Key")
+                return
+            end
+            blueprint_library:AddToRazInventory(level_script_actor, ft_key, 1)
 
             -- Remove auto added Psitanium pocket upgrades
             local pocket_psi_1 = StaticFindObject("/Game/Gameplay/Inventory/Pockets/INV_POCKET_Psitanium_1.INV_POCKET_Psitanium_1")
@@ -297,7 +306,24 @@ RegisterBeginPlayPreHook(function(Actor)
         else
             print("Couldn't find storage room door quest status\n")
         end
+
+    -- Swap HUB2 state between PostGame and Pre-boss
+    elseif actor_full_name == "P2LevelStreamingVolume /Game/Maps/HUB2/HUB2.HUB2:PersistentLevel.P2LevelStreamingVolume_STATE9" then
+        local quest_status = StaticFindObject("/Game/Maps/HUB2/HUB2.HUB2:PersistentLevel.P2LevelStreamingVolume_STATE9.P2Condition_QuestStatus_0")
+        if quest_status:IsValid() then
+            quest_status.m_bInvertCondition = true
+        else
+            print("Couldn't find HUB2 state9 quest status\n")
+        end
+    elseif actor_full_name == "P2LevelStreamingVolume /Game/Maps/HUB2/HUB2.HUB2:PersistentLevel.P2LevelStreamingVolume_PostGame" then
+        local quest_status = StaticFindObject("/Game/Maps/HUB2/HUB2.HUB2:PersistentLevel.P2LevelStreamingVolume_PostGame.P2Condition_QuestStatus_0")
+        if quest_status:IsValid() then
+            quest_status.m_bInvertCondition = true
+        else
+            print("Couldn't find HUB2 postgame quest status\n")
+        end
     end
+
 
 end)
 
@@ -332,23 +358,26 @@ end
 function HookedP2OpenLevel(Context, WorldContextParam, LevelParam, CutscenesToPreloadParam, DestinationPlayerStartParam, 
     FadeParamsParam, bOverrideLoadingLevelParam, LoadingLevelParam, bSaveGameParam, SaveAutoBackupNameParm, bRestoreRazToFullHealthParam)
     local kismet_system = UEHelpers.GetKismetSystemLibrary()
+    local player_start = DestinationPlayerStartParam:get():GetObjectID():GetAssetPathName():ToString()
     -- LoadingLevel 2 is NewGame
     if LoadingLevelParam:Get() == 2 then
         -- Replace the target map for NewGame loads to be HQIN
-        --local HQINMapSoft = kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath("/Game/Maps/HQIN/HQIN.HQIN"))
         local QUARMapSoft = kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath("/Game/Maps/QUAR/QUAR.QUAR"))
-        --local DefaultStartSoft = kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath("/Game/Gameplay/StartPoints/HQIN/START_HQIN_Default.START_HQIN_Default"))
         local DefaultStartSoft = kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath("/Game/Gameplay/StartPoints/QUAR/START_QUAR_FromHQIN.START_QUAR_FromHQIN"))
         LevelParam:Set(QUARMapSoft)
-        --LevelParam:Set(HQINMapSoft)
         DestinationPlayerStartParam:Set(DefaultStartSoft)
         -- Set NewGame flag to allow BeginPlay hooks to handle initial game setup
         new_game = true;
-    elseif level_complete_redirect_dests[DestinationPlayerStartParam:get():GetObjectID():GetAssetPathName():ToString()] == true then
+    elseif level_complete_redirect_dests[player_start] == true then
         local HQINMapSoft = kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath("/Game/Maps/HQIN/HQIN.HQIN"))
         local DefaultStartSoft = kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath("/Game/Gameplay/StartPoints/HQIN/START_HQIN_SashaLabTumbler.START_HQIN_SashaLabTumbler"))
         LevelParam:Set(HQINMapSoft)
         DestinationPlayerStartParam:Set(DefaultStartSoft)
+    elseif final_boss_unlocked and player_start == "/Game/Gameplay/StartPoints/QUAR/START_QUAR_FromHQIN.START_QUAR_FromHQIN" then
+        local QAEX_soft = kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath("/Game/Maps/QAEX/QAEX.QAEX"))
+        local boss_start_soft = kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath("/Game/Gameplay/StartPoints/QAEX/START_QAEX_FromHUB2.START_QAEX_FromHUB2"))
+        LevelParam:Set(QAEX_soft)
+        DestinationPlayerStartParam:Set(boss_start_soft)
     end
 end
 

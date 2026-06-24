@@ -141,10 +141,15 @@ RegisterBeginPlayPreHook(function(Actor)
                 print("Couldn't find INV_POCKET_Psitanium_2")
             end
 
-            -- Start Sidequests
+            ------- Start Sidequests -----------
             local kismet_system = UEHelpers.GetKismetSystemLibrary()
+            -- Scavenger Hunt
             local soft_scav_quest = kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath("/Game/Gameplay/Quests/SIDEQUESTS/ScavengerHunt/QUEST_HUB1_ScavHunt_Root.QUEST_HUB1_ScavHunt_Root"))
             blueprint_library:AddQuestNew(level_script_actor, soft_scav_quest, soft_scav_quest)
+
+            -- Seismometer Vents
+            local soft_gisu_sidequest = kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath("/Game/Gameplay/Quests/SIDEQUESTS/QUEST_HUB1_GisuSidequest_Root.QUEST_HUB1_GisuSidequest_Root"))
+            blueprint_library:AddQuestNew(level_script_actor, soft_gisu_sidequest, soft_gisu_sidequest)
 
             new_game = false
         end

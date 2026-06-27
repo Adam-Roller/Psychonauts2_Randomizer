@@ -3,9 +3,10 @@ local quests = require("quests")
 
 print("[PS2RandomizerMod] Mod Loaded\n")
 
-local new_game = false;
-local MConnUnlocked = false;
-local final_boss_unlocked = false;
+local new_game = false
+local MConnUnlocked = false
+local final_boss_unlocked = false
+local item_to_allow = nil
 
 -- These Classes receive BeginPlay calls near the end of a level loading so code can run assuming most items are loaded
 local late_level_actors = { 
@@ -391,10 +392,33 @@ function HookedP2OpenLevel(Context, WorldContextParam, LevelParam, CutscenesToPr
     end
 end
 
+function HookedOnInventoryItemAmountChangedPost(Context, pInventoryItem, iOldAmount, iNewAmount, bFromLoad)
+    print("In post-hook")
+    if iOldAmount:get() < iNewAmount:get() then
+        if not (pInventoryItem:get():GetFullName() == item_to_allow) then
+            print("Not the item to allow")
+            local blueprint_library = StaticFindObject("/Script/Psychonauts2.Default__P2BlueprintLibrary")
+            if not blueprint_library:IsValid() then
+                print("No instance of class 'Default__P2BlueprintLibrary' was found.")
+                return
+            end
+            local persistent_level = UEHelpers:GetPersistentLevel()
+            local level_script_actor = persistent_level.LevelScriptActor
+
+            local amount_to_add = iNewAmount:get() - iOldAmount:get()
+            blueprint_library:RemoveFromRazInventory(level_script_actor, pInventoryItem:get(), amount_to_add)
+        else
+            print("Yes the item to allow")
+            item_to_allow = nil
+        end
+    end
+end
+
 RegisterHook("/Script/Psychonauts2.P2BlueprintLibrary:P2OpenLevel", HookedP2OpenLevel)
 RegisterHook("/Script/Psychonauts2.P2BlueprintLibrary:IsQuestCompleteNew", HookedIsQuestCompleteNew)
 RegisterHook("/Script/Psychonauts2.P2BlueprintLibrary:IsQuestActiveNew", HookedIsQuestActiveNew)
 --RegisterHook("/Script/Psychonauts2.P2BlueprintLibrary:CompleteQuestNew", function(Context) end, HookedCompleteQuestNewPost)
+RegisterHook("/Script/Psychonauts2.P2UpgradeManager:OnInventoryItemAmountChanged", function(_) end, HookedOnInventoryItemAmountChangedPost)
 
 -- Keybinds
 ----------------
@@ -456,6 +480,7 @@ RegisterKeyBind(Key.F5, {ModifierKey.CONTROL}, function()
         print ("Couldn't find Levitation Powerkey")
         return
     end
+    item_to_allow = levitation:GetFullName()
     blueprint_library:AddToRazInventory(level_script_actor, levitation, 1)
 end)
 
@@ -551,5 +576,6 @@ RegisterKeyBind(Key.F10, {ModifierKey.CONTROL}, function()
         print("Couldn't find Ability Radial")
         return
     end
+    item_to_allow = ability_radial:GetFullName()
     blueprint_library:AddToRazInventory(level_script_actor, ability_radial, 1)
 end)

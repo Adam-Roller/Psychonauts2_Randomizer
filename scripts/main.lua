@@ -37,6 +37,19 @@ local colu_special_doors = {
     ["GMO_GEN_COLU_HollisDoor_C"] = "/Game/Gameplay/FastTravelData/UIData/COLU/UIData_FTCOLU_HOLL.UIData_FTCOLU_HOLL",
 }
 local colu_special_door_sublevels_enabled = {
+    ["GMO_GEN_COLU_FordDoor_C"] = {
+        ["FT_COLU_FORH"] = true,
+        ["FT_COLU_FORC"] = true,
+        ["FT_COLU_FORB"] = true,
+        ["FT_COLU_FORG"] = true,
+        ["FT_COLU_START"] = true,
+        ["Nevermind"] = true
+    },
+    ["GMO_GEN_COLU_HollisDoor_C"] = {
+        ["FT_COLU_HOLL_Classroom"] = true,
+        ["FT_COLU_HOLL_Casino"] = true,
+        ["FT_COLU_START"] = true,
+    },
 }
 
 -- HQIN_FT destinations are used to unlock fast travel destinations
@@ -70,14 +83,21 @@ local level_complete_redirect_dests = {
     ["/Game/Gameplay/StartPoints/HUB2/START_HUB2_Lathe.START_HUB2_Lathe"] = true,
 }
 
-function UnlockTumbler()
-    ---@type UCoTalker | UObject
-    local talker = StaticFindObject("/Game/Maps/HQIN/HQIN_DES.HQIN_DES:PersistentLevel.GMO_GEN_FastTravel_BrainTumbler_2.COMP_Talker_Solo_BrainTumbler")
-    if talker:IsValid() then
-        local kismet_system = UEHelpers.GetKismetSystemLibrary()
-        talker.m_DialogTreeConditionalData.m_rReqCompletedQuest = kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath("None"))
+-- conn for connection testing
+RegisterConsoleCommandHandler("conn", function(FullCommand, Parameters, OutputDevice) 
+    local host = Parameters[1]
+    local slot_name = Parameters[2]
+    local password = Parameters[3]
+
+    if not host then
+        OutputDevice:Log("Please specify a host")    
     end
-end
+    if not slot_name then
+        OutputDevice:Log("Please specify a slot name")
+    end
+    Multiworld:Connect(host, slot_name, "")
+    return true
+end)
 
 RegisterBeginPlayPreHook(function(Actor)
     --print(string.format("BeginPlay: %s\n", Actor:get():GetClass():GetFName():ToString()))
@@ -155,7 +175,11 @@ RegisterBeginPlayPreHook(function(Actor)
             door_ft_dest.Destinations:ForEach(function (_, elem)
                 -- Each destination can make specific sub-brains (in)accessable if you haven't been there
                 local destination = elem:get()
-                destination.bNoVisitRequired = true
+                if colu_special_door_sublevels_enabled[actor_class_name][destination.FastTravelID] == true then
+                    destination.bNoVisitRequired = true
+                else
+                    destination.bNoVisitRequired = false
+                end
                 elem:set(destination)
             end)
         else
@@ -260,8 +284,11 @@ function HookedOnInventoryItemAmountChangedPost(Context, pInventoryItem, iOldAmo
             local persistent_level = UEHelpers:GetPersistentLevel()
             local level_script_actor = persistent_level.LevelScriptActor
 
+            -- Remove what was just added
             local amount_to_remove = iNewAmount:get() - iOldAmount:get()
             blueprint_library:RemoveFromRazInventory(level_script_actor, pInventoryItem:get(), amount_to_remove)
+
+            -- Tell Multiworld the item has been picked up
         else
             print("Yes the item to allow")
             item_to_allow = nil
@@ -403,4 +430,13 @@ end
 function CreateSoftObject(pathString)
     local kismet_system = UEHelpers.GetKismetSystemLibrary()
     return kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath(pathString))
+end
+
+function UnlockTumbler()
+    ---@type UCoTalker | UObject
+    local talker = StaticFindObject("/Game/Maps/HQIN/HQIN_DES.HQIN_DES:PersistentLevel.GMO_GEN_FastTravel_BrainTumbler_2.COMP_Talker_Solo_BrainTumbler")
+    if talker:IsValid() then
+        local kismet_system = UEHelpers.GetKismetSystemLibrary()
+        talker.m_DialogTreeConditionalData.m_rReqCompletedQuest = kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath("None"))
+    end
 end

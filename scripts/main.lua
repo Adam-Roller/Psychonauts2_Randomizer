@@ -21,14 +21,14 @@ local late_level_actors = {
 
 -- These Classes are used to control COLU door access
 local colu_door_actors = {
-    ["GMO_GEN_COLU_BobDoor_C"] = true,
-    ["GMO_GEN_COLU_CassieDoor_C"] = true,
-    ["GMO_GEN_COLU_ComptonDoor_C"] = true,
-    ["GMO_GEN_COLU_FordVistaDoor_C"] = true,
-    ["GMO_GEN_COLU_GristolDoor_C"] = true,
-    ["GMO_GEN_COLU_HelmutDoor_C"] = true,
-    ["GMO_GEN_COLU_LobotoDoor_C"] = true,
-    ["GMO_GEN_COLU_MaligulaDoor_C"] = true,
+    ["GMO_GEN_COLU_BobDoor_C"] = false,
+    ["GMO_GEN_COLU_CassieDoor_C"] = false,
+    ["GMO_GEN_COLU_ComptonDoor_C"] = false,
+    ["GMO_GEN_COLU_FordVistaDoor_C"] = false,
+    ["GMO_GEN_COLU_GristolDoor_C"] = false,
+    ["GMO_GEN_COLU_HelmutDoor_C"] = false,
+    ["GMO_GEN_COLU_LobotoDoor_C"] = false,
+    ["GMO_GEN_COLU_MaligulaDoor_C"] = false,
 }
 
 -- These doors require a differnt COLU door unlock method
@@ -38,17 +38,18 @@ local colu_special_doors = {
 }
 local colu_special_door_sublevels_enabled = {
     ["GMO_GEN_COLU_FordDoor_C"] = {
-        ["FT_COLU_FORH"] = true,
-        ["FT_COLU_FORC"] = true,
-        ["FT_COLU_FORB"] = true,
-        ["FT_COLU_FORG"] = true,
-        ["FT_COLU_START"] = true,
+        ["FT_COLU_FORH"] = false,
+        ["FT_COLU_FORC"] = false,
+        ["FT_COLU_FORB"] = false,
+        ["FT_COLU_FORG"] = false,
+        ["FT_COLU_START"] = false,
         ["Nevermind"] = true
     },
     ["GMO_GEN_COLU_HollisDoor_C"] = {
-        ["FT_COLU_HOLL_Classroom"] = true,
-        ["FT_COLU_HOLL_Casino"] = true,
-        ["FT_COLU_START"] = true,
+        ["FT_COLU_HOLL_Classroom"] = false,
+        ["FT_COLU_HOLL_Casino"] = false,
+        ["FT_COLU_START"] = false,
+        ["Nevermind"] = true
     },
 }
 
@@ -175,7 +176,7 @@ RegisterBeginPlayPreHook(function(Actor)
             door_ft_dest.Destinations:ForEach(function (_, elem)
                 -- Each destination can make specific sub-brains (in)accessable if you haven't been there
                 local destination = elem:get()
-                if colu_special_door_sublevels_enabled[actor_class_name][destination.FastTravelID] == true then
+                if colu_special_door_sublevels_enabled[actor_class_name][destination.FastTravelID:ToString()] == true then
                     destination.bNoVisitRequired = true
                 else
                     destination.bNoVisitRequired = false

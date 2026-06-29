@@ -2,6 +2,10 @@ Multiworld = {}
 
 local UEHelpers = require("UEHelpers")
 local AP = require "lua-apclientpp"
+local items = require("items")
+local levels = require("levels")
+local item_map = require("ap_item_map")
+local loc_map = require("ap_loc_map")
 
 if AP == nil then
     error("lua-apclientpp not found!")
@@ -131,100 +135,18 @@ function Multiworld:SendLocationCheck(location_id)
         end
     end
 end
---================================
---INTERCEPT ITEMS
---================================
-
-local item_to_allow = nil
--- fixes inventory
-function HookedOnInventoryItemAmountChangedPost(Context, pInventoryItem, iOldAmount, iNewAmount, bFromLoad)
-    print("In post-hook")
-    -- if item is a location send it -- CRUCIAL for scav hunt items
-
-    local item = pInventoryItem:get():GetFullName()
-    local _, path = item:match("([^ ]+) (.+)")
-    print(path)
-    local location_id = AP_Loc_Map[path]
-    if location_id then
-        print("[AP] Valid location check picked up! Sending to server: " .. tostring(location_id) .. "\n")
-        Multiworld:SendLocationCheck(location_id)
-    end
-    if iOldAmount:get() < iNewAmount:get() then
-        if not (item == item_to_allow) then
-            print("Not the item to allow")
-            local blueprint_library = StaticFindObject("/Script/Psychonauts2.Default__P2BlueprintLibrary")
-            if not blueprint_library:IsValid() then
-                print("No instance of class 'Default__P2BlueprintLibrary' was found.")
-                return
-            end
-            local persistent_level = UEHelpers:GetPersistentLevel()
-            local level_script_actor = persistent_level.LevelScriptActor
-
-            local amount_to_add = iNewAmount:get() - iOldAmount:get()
-            blueprint_library:RemoveFromRazInventory(level_script_actor, pInventoryItem:get(), amount_to_add)
-        else
-            print("Yes the item to allow")
-            item_to_allow = nil
-        end
-    end
-end
--- handles collectable and sends location
-local function HandleCollectable(ContextWrapper)
-    print("In Collectable Pre-hook")
-    local Context = ContextWrapper:get()
-    if not Context or not Context:IsValid() then return end
-
-    local OwnerActor = Context:GetOwner()
-    if not OwnerActor or not OwnerActor:IsValid() then return end
-
-    local fullName = OwnerActor:GetFullName()
-    local _, path = fullName:match("([^ ]+) (.+)")
-    local caller_path = path or fullName
-
-    local location_id = AP_Loc_Map[caller_path]
-
-    if location_id then
-        print("[AP] Valid location check picked up! Sending to server: " .. tostring(location_id) .. "\n")
-        Multiworld:SendLocationCheck(location_id)
-    end
-end
-
-
-
-RegisterHook("/Script/Psychonauts2.P2UpgradeManager:OnInventoryItemAmountChanged", function(_) end, HookedOnInventoryItemAmountChangedPost)
-
-RegisterHook("/Script/Psychonauts2.CoCollectable:OnCollectablePickedUp", function(ContextWrapper)
-    return HandleCollectable(ContextWrapper)
-end)
-
-RegisterHook("/Script/Psychonauts2.CoCollectable:Collect", function(ContextWrapper)
-    return HandleCollectable(ContextWrapper)
-end)
 
 function Multiworld:ReceiveItem(item_id)
     print(item_id)
-    local item_path = AP_Item_Map[item_id]
-    item_to_allow = item_path
-    if not item_path then
+    local item = AP_Item_Map[item_id]
+    if item.type == "brain" then
+        levels.UnlockBrainLevel(item.path)
+    elseif item.type == "item" then
+        items.AddToRaz(item.path, 1)
+    elseif item.type == "hub" then
+        levels.UnlockHubLevel(item.path)
+    else
         print("[AP ERROR] Unknown Item ID received: " .. tostring(item_id) .. "\n")
-        return
-    end
-
-    local Blueprint_Library = StaticFindObject("/Script/Psychonauts2.Default__P2BlueprintLibrary")
-    local Persistent_Level = UEHelpers:GetPersistentLevel()
-    
-    if Blueprint_Library:IsValid() and Persistent_Level:IsValid() then
-        local Level_Script_Actor = Persistent_Level.LevelScriptActor
-        local item = StaticFindObject(item_path)
-        
-        if item and item:IsValid() then
-            -- IsAPGrant = true
-            Blueprint_Library:AddToRazInventory(Level_Script_Actor, item, 1)
-            print("[AP] Granted Item from Server: " .. item_path .. "\n")
-            -- IsAPGrant = false
-        else
-            print("[AP ERROR] UE Object invalid for path: " .. item_path .. "\n")
-        end
     end
 end
 

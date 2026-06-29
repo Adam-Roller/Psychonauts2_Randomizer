@@ -1,57 +1,14 @@
 local UEHelpers = require("UEHelpers")
 local quests = require("quests")
+local levels = require("levels")
+local items = require("items")
+local Multiworld = require("multiworld")
 
 print("[PS2RandomizerMod] Mod Loaded\n")
 
 local new_game = false
 local mental_connection_unlocked = false
 local final_boss_unlocked = false
-local item_to_allow = nil
-
--- These Classes receive BeginPlay calls near the end of a level loading so code can run assuming most items are loaded
-local late_level_actors = { 
-    ["COLU_C"] = true, 
-    ["HOLL_CLASS_C"] = true, 
-    ["HQIN_C"] = true, 
-    ["LOBO_C"] = true,
-    ["QUAR_C"] = true,
-    ["QAEX_C"] = true,
-    ["HUB2_C"] = true,
-}
-
--- These Classes are used to control COLU door access
-local colu_door_actors = {
-    ["GMO_GEN_COLU_BobDoor_C"] = false,
-    ["GMO_GEN_COLU_CassieDoor_C"] = false,
-    ["GMO_GEN_COLU_ComptonDoor_C"] = false,
-    ["GMO_GEN_COLU_FordVistaDoor_C"] = false,
-    ["GMO_GEN_COLU_GristolDoor_C"] = false,
-    ["GMO_GEN_COLU_HelmutDoor_C"] = false,
-    ["GMO_GEN_COLU_LobotoDoor_C"] = false,
-    ["GMO_GEN_COLU_MaligulaDoor_C"] = false,
-}
-
--- These doors require a differnt COLU door unlock method
-local colu_special_doors = {
-    ["GMO_GEN_COLU_FordDoor_C"] = "/Game/Gameplay/FastTravelData/UIData/COLU/UIData_FTCOLU_Ford.UIData_FTCOLU_Ford",
-    ["GMO_GEN_COLU_HollisDoor_C"] = "/Game/Gameplay/FastTravelData/UIData/COLU/UIData_FTCOLU_HOLL.UIData_FTCOLU_HOLL",
-}
-local colu_special_door_sublevels_enabled = {
-    ["GMO_GEN_COLU_FordDoor_C"] = {
-        ["FT_COLU_FORH"] = false,
-        ["FT_COLU_FORC"] = false,
-        ["FT_COLU_FORB"] = false,
-        ["FT_COLU_FORG"] = false,
-        ["FT_COLU_START"] = false,
-        ["Nevermind"] = true
-    },
-    ["GMO_GEN_COLU_HollisDoor_C"] = {
-        ["FT_COLU_HOLL_Classroom"] = false,
-        ["FT_COLU_HOLL_Casino"] = false,
-        ["FT_COLU_START"] = false,
-        ["Nevermind"] = true
-    },
-}
 
 -- HQIN_FT destinations are used to unlock fast travel destinations
 local ft_destinations = {
@@ -108,25 +65,25 @@ RegisterBeginPlayPreHook(function(Actor)
     local actor_full_name = Actor:get():GetFullName()
 
 
-    if late_level_actors[actor_class_name] == true then
+    if levels.late_level_actors[actor_class_name] == true then
 
         -- On NewGame load fix starting items
         if new_game then
             -- Remove auto added Abilities from quest system
-            RemoveAllClassFromRaz("POWERKEY_Base_C", 1)
+            items.RemoveAllClassFromRaz("POWERKEY_Base_C", 1)
 
             -- Remove auto added Mental Health 
-            RemoveFromRaz("/Game/Gameplay/Inventory/Upgrades/Minds/INV_Mind_HP.INV_Mind_HP", 18)
+            items.RemoveFromRaz("/Game/Gameplay/Inventory/Upgrades/Minds/INV_Mind_HP.INV_Mind_HP", 18)
 
             -- Remove auto added Psitanium pocket upgrades
-            RemoveFromRaz("/Game/Gameplay/Inventory/Pockets/INV_POCKET_Psitanium_1.INV_POCKET_Psitanium_1", 1)
-            RemoveFromRaz("/Game/Gameplay/Inventory/Pockets/INV_POCKET_Psitanium_2.INV_POCKET_Psitanium_2", 1)
+            items.RemoveFromRaz("/Game/Gameplay/Inventory/Pockets/INV_POCKET_Psitanium_1.INV_POCKET_Psitanium_1", 1)
+            items.RemoveFromRaz("/Game/Gameplay/Inventory/Pockets/INV_POCKET_Psitanium_2.INV_POCKET_Psitanium_2", 1)
 
             -- Add Fast Travel Key
-            AddToRaz("/Game/Gameplay/Inventory/FastTravel/INV_FTKey.INV_FTKey", 1)
+            items.AddToRaz("/Game/Gameplay/Inventory/FastTravel/INV_FTKey.INV_FTKey", 1)
 
             -- Add Ability radial
-            AddToRaz("/Game/Characters/Raz/Abilities/INV_AbilityRadialMenu.INV_AbilityRadialMenu", 1)
+            items.AddToRaz("/Game/Characters/Raz/Abilities/INV_AbilityRadialMenu.INV_AbilityRadialMenu", 1)
 
             ------- Start Sidequests -----------
             -- Scavenger Hunt
@@ -140,9 +97,9 @@ RegisterBeginPlayPreHook(function(Actor)
         -- Before fully unlocking, Add Mental Connection power when in COLU, remove when leaving
         if not mental_connection_unlocked then
             if actor_class_name == "COLU_C" then
-                AddToRaz("/Game/Gameplay/Inventory/Powers/POWERKEY_MConn.POWERKEY_MConn", 1)
+                items.AddToRaz("/Game/Gameplay/Inventory/Powers/POWERKEY_MConn.POWERKEY_MConn", 1)
             else
-                --RemoveFromRaz("/Game/Gameplay/Inventory/Powers/POWERKEY_MConn.POWERKEY_MConn", 1)
+                --items.RemoveFromRaz("/Game/Gameplay/Inventory/Powers/POWERKEY_MConn.POWERKEY_MConn", 1)
             end
         end
 
@@ -154,8 +111,10 @@ RegisterBeginPlayPreHook(function(Actor)
                 if dest_obj:IsValid() then
                     dest_obj.Destinations:ForEach(function (_, elem)
                         local destination = elem:get()
-                        destination.bNoVisitRequired = true
-                        elem:set(destination)
+                        if levels.ft_dest_unlocked[destination.FastTravelID:ToString()] == true then
+                            destination.bNoVisitRequired = true
+                            elem:set(destination)
+                        end
                     end)
                 else
                     print(string.format("Couldn't find Object for %s\n", ele))
@@ -169,14 +128,14 @@ RegisterBeginPlayPreHook(function(Actor)
         end
 
     -- When entering COLU make FORD/HOLLIS doors (in)accessable
-    elseif colu_special_doors[actor_class_name] ~= nil then
+    elseif levels.colu_special_doors[actor_class_name] ~= nil then
         ---@class UDestination
-        local door_ft_dest = StaticFindObject(colu_special_doors[actor_class_name])
+        local door_ft_dest = StaticFindObject(levels.colu_special_doors[actor_class_name])
         if door_ft_dest:IsValid() then
             door_ft_dest.Destinations:ForEach(function (_, elem)
                 -- Each destination can make specific sub-brains (in)accessable if you haven't been there
                 local destination = elem:get()
-                if colu_special_door_sublevels_enabled[actor_class_name][destination.FastTravelID:ToString()] == true then
+                if levels.colu_special_door_sublevels_enabled[actor_class_name][destination.FastTravelID:ToString()] == true then
                     destination.bNoVisitRequired = true
                 else
                     destination.bNoVisitRequired = false
@@ -184,7 +143,7 @@ RegisterBeginPlayPreHook(function(Actor)
                 elem:set(destination)
             end)
         else
-            print(string.format("Couldn't find door destination object: %s\n"), colu_special_doors[actor_class_name])
+            print(string.format("Couldn't find door destination object: %s\n"), levels.colu_special_doors[actor_class_name])
         end
         -- Ford door needs to be made visibile separately
         if actor_class_name == "GMO_GEN_COLU_FordDoor_C" then
@@ -194,14 +153,14 @@ RegisterBeginPlayPreHook(function(Actor)
         end
 
     -- When entering COLU make all other doors (in)visible
-    elseif colu_door_actors[actor_class_name] ~= nil then
+    elseif levels.colu_door_actors[actor_class_name] ~= nil then
         -- All these doors can be controled via LockedCutsceneInteraction (Lobo still appears but doesn't work)
         local locked_cutscene_class = StaticFindObject("/Game/Gameplay/Components/COMP_LockedCutsceneInteraction.COMP_LockedCutsceneInteraction_C")
         if locked_cutscene_class:IsValid() then
             local locked_cutscene = Actor:get():GetComponentByClass(locked_cutscene_class)
             if locked_cutscene:IsValid() then
                 local quest_to_set = "None"
-                if colu_door_actors[actor_class_name] == false then
+                if levels.colu_door_actors[actor_class_name] == false then
                     quest_to_set = "/Game/Gameplay/Quests/HUB1/QUEST_HUB1_4000_BeginPostgame.QUEST_HUB1_4000_BeginPostgame"
                 end
                 local kismet_system = UEHelpers.GetKismetSystemLibrary()
@@ -275,7 +234,7 @@ end
 
 function HookedOnInventoryItemAmountChangedPost(Context, pInventoryItem, iOldAmount, iNewAmount, bFromLoad)
     if iOldAmount:get() < iNewAmount:get() then
-        if not (pInventoryItem:get():GetFullName() == item_to_allow) then
+        if not (pInventoryItem:get():GetFullName() == items.item_to_allow) then
             ---@class UP2BlueprintLibrary
             local blueprint_library = StaticFindObject("/Script/Psychonauts2.Default__P2BlueprintLibrary")
             if not blueprint_library:IsValid() then
@@ -290,13 +249,49 @@ function HookedOnInventoryItemAmountChangedPost(Context, pInventoryItem, iOldAmo
             blueprint_library:RemoveFromRazInventory(level_script_actor, pInventoryItem:get(), amount_to_remove)
 
             -- Tell Multiworld the item has been picked up
+            local item = pInventoryItem:get():GetFullName()
+            local _, path = item:match("([^ ]+) (.+)")
+            print(path)
+            local location_id = AP_Loc_Map[path]
+            if location_id then
+                print("[AP] Valid location check picked up! Sending to server: " .. tostring(location_id) .. "\n")
+                Multiworld:SendLocationCheck(location_id)
+            end
         else
             print("Yes the item to allow")
-            item_to_allow = nil
+            items.item_to_allow = nil
         end
     end
 end
 
+-- handles collectable and sends location
+local function HandleCollectable(ContextWrapper)
+    print("In Collectable Pre-hook")
+    local Context = ContextWrapper:get()
+    if not Context or not Context:IsValid() then return end
+
+    local OwnerActor = Context:GetOwner()
+    if not OwnerActor or not OwnerActor:IsValid() then return end
+
+    local fullName = OwnerActor:GetFullName()
+    local _, path = fullName:match("([^ ]+) (.+)")
+    local caller_path = path or fullName
+
+    local location_id = AP_Loc_Map[caller_path]
+
+    if location_id then
+        print("[AP] Valid location check picked up! Sending to server: " .. tostring(location_id) .. "\n")
+        Multiworld:SendLocationCheck(location_id)
+    end
+end
+
+RegisterHook("/Script/Psychonauts2.CoCollectable:OnCollectablePickedUp", function(ContextWrapper)
+    return HandleCollectable(ContextWrapper)
+end)
+
+RegisterHook("/Script/Psychonauts2.CoCollectable:Collect", function(ContextWrapper)
+    return HandleCollectable(ContextWrapper)
+end)
 RegisterHook("/Script/Psychonauts2.P2BlueprintLibrary:P2OpenLevel", HookedP2OpenLevel)
 RegisterHook("/Script/Psychonauts2.P2BlueprintLibrary:IsQuestCompleteNew", HookedIsQuestCompleteNew)
 RegisterHook("/Script/Psychonauts2.P2UpgradeManager:OnInventoryItemAmountChanged", function(_) end, HookedOnInventoryItemAmountChangedPost)
@@ -306,7 +301,7 @@ RegisterHook("/Script/Psychonauts2.P2UpgradeManager:OnInventoryItemAmountChanged
 
 -- Add TimeBubble
 RegisterKeyBind(Key.F2, {ModifierKey.CONTROL}, function()
-    AddToRaz("/Game/Gameplay/Inventory/Powers/POWERKEY_TimeBubble.POWERKEY_TimeBubble", 1)
+    items.AddToRaz("/Game/Gameplay/Inventory/Powers/POWERKEY_TimeBubble.POWERKEY_TimeBubble", 1)
 end)
 
 -- Sanity Check of Hub quest statuses
@@ -316,102 +311,40 @@ end)
 
 -- Give yourself MentalConnection in case it's taken away
 RegisterKeyBind(Key.F4, {ModifierKey.CONTROL}, function()
-    AddToRaz("/Game/Gameplay/Inventory/Powers/POWERKEY_MConn.POWERKEY_MConn", 1)
+    items.AddToRaz("/Game/Gameplay/Inventory/Powers/POWERKEY_MConn.POWERKEY_MConn", 1)
 end)
 
 -- Add Levitation
 RegisterKeyBind(Key.F5, {ModifierKey.CONTROL}, function()
-    AddToRaz("/Game/Gameplay/Inventory/Powers/POWERKEY_Levitation.POWERKEY_Levitation", 1)
+    items.AddToRaz("/Game/Gameplay/Inventory/Powers/POWERKEY_Levitation.POWERKEY_Levitation", 1)
 end)
 
 -- Add TK
 RegisterKeyBind(Key.F6, {ModifierKey.CONTROL}, function()
-    AddToRaz("/Game/Gameplay/Inventory/Powers/POWERKEY_Telekinesis.POWERKEY_Telekinesis", 1)
+    items.AddToRaz("/Game/Gameplay/Inventory/Powers/POWERKEY_Telekinesis.POWERKEY_Telekinesis", 1)
 end)
 
 -- Add Pyro
 RegisterKeyBind(Key.F7, {ModifierKey.CONTROL}, function()
-    AddToRaz("/Game/Gameplay/Inventory/Powers/POWERKEY_Pyrokinesis.POWERKEY_Pyrokinesis", 1)
+    items.AddToRaz("/Game/Gameplay/Inventory/Powers/POWERKEY_Pyrokinesis.POWERKEY_Pyrokinesis", 1)
 end)
 
 -- Add PSIBlast
 RegisterKeyBind(Key.F8, {ModifierKey.CONTROL}, function()
-    AddToRaz("/Game/Gameplay/Inventory/Powers/POWERKEY_PsiBlast.POWERKEY_PsiBlast", 1)
+    items.AddToRaz("/Game/Gameplay/Inventory/Powers/POWERKEY_PsiBlast.POWERKEY_PsiBlast", 1)
 end)
 
 -- Add Salts
 RegisterKeyBind(Key.F9, {ModifierKey.CONTROL}, function()
-    AddToRaz("/Game/Gameplay/Inventory/INV_SmellingSalts.INV_SmellingSalts", 1)
+    items.AddToRaz("/Game/Gameplay/Inventory/INV_SmellingSalts.INV_SmellingSalts", 1)
 end)
 
 -- Add Radial
 RegisterKeyBind(Key.F10, {ModifierKey.CONTROL}, function()
-    AddToRaz("/Game/Characters/Raz/Abilities/INV_AbilityRadialMenu.INV_AbilityRadialMenu", 1)
+    items.AddToRaz("/Game/Characters/Raz/Abilities/INV_AbilityRadialMenu.INV_AbilityRadialMenu", 1)
 end)
 
 ------- Helper functions --------
-function AddToRaz(itemPath, amount)
-    --- @class UP2BlueprintLibrary
-    local blueprint_library = StaticFindObject("/Script/Psychonauts2.Default__P2BlueprintLibrary")
-    if not blueprint_library:IsValid() then
-        print("No instance of class 'Default__P2BlueprintLibrary' was found.")
-        return
-    end
-    local persistent_level = UEHelpers:GetPersistentLevel()
-    local level_script_actor = persistent_level.LevelScriptActor
-
-    --- @class UInventoryItem
-    local item_to_add = StaticFindObject(itemPath)
-    if not item_to_add:IsValid() then
-        print(string.format("No object found with name: %s\n", itemPath))
-        return
-    end
-    item_to_allow = item_to_add:GetFullName()
-    blueprint_library:AddToRazInventory(level_script_actor, item_to_add, amount)
-end
-
-function RemoveFromRaz(itemPath, amount)
-    --- @class UP2BlueprintLibrary
-    local blueprint_library = StaticFindObject("/Script/Psychonauts2.Default__P2BlueprintLibrary")
-    if not blueprint_library:IsValid() then
-        print("No instance of class 'Default__P2BlueprintLibrary' was found.")
-        return
-    end
-    local persistent_level = UEHelpers:GetPersistentLevel()
-    local level_script_actor = persistent_level.LevelScriptActor
-
-    --- @class UInventoryItem
-    local item_to_remove = StaticFindObject(itemPath)
-    if not item_to_remove:IsValid() then
-        print(string.format("No object found with name: %s\n", itemPath))
-        return
-    end
-    blueprint_library:RemoveFromRazInventory(level_script_actor, item_to_remove, amount)
-end
-
-function RemoveAllClassFromRaz(className, amount)
-    ---@class UP2BlueprintLibrary
-    local blueprint_library = StaticFindObject("/Script/Psychonauts2.Default__P2BlueprintLibrary")
-    if not blueprint_library:IsValid() then
-        print("No instance of class 'Default__P2BlueprintLibrary' was found.")
-        return
-    end
-    local persistent_level = UEHelpers:GetPersistentLevel()
-    local level_script_actor = persistent_level.LevelScriptActor
-
-    -- Remove auto added Abilities
-    local all_class_objects = FindAllOf(className)
-    if not all_class_objects then
-        print(string.format("No instances of '%s' were found\n", className))
-    else
-        for _, item in pairs(all_class_objects) do
-            if item:IsValid() then
-                blueprint_library:RemoveFromRazInventory(level_script_actor, item, amount)
-            end
-        end
-    end
-end
-
 function AddSideQuest(questName)
     ---@class UP2BlueprintLibrary
     local blueprint_library = StaticFindObject("/Script/Psychonauts2.Default__P2BlueprintLibrary")

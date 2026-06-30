@@ -395,7 +395,7 @@ AP_Item_Map = {
     [20210825393] = { path = "GMO_GEN_COLU_CassieDoor_C", type = "brain" },
     [20210825394] = { path = "GMO_GEN_COLU_MaligulaDoor_C", type = "brain" },
     [20210825395] = { path = "GMO_GEN_COLU_GristolDoor_C", type = "brain" },
-    [20210825396] = { path = "Maligula Fight Access", type = "item" },
+    [20210825396] = { path = "Maligula Fight Access", type = "boss" },
     [20210825397] = { path = "/Game/Gameplay/Inventory/Upgrades/Powers/Movement/INV_Upgrade_Move_TumbleAttack.INV_Upgrade_Move_TumbleAttack", type = "item" },
     [20210825398] = { path = "/Game/Gameplay/Inventory/Upgrades/Powers/Melee/INV_Upgrade_Melee_ExtendedCombo.INV_Upgrade_Melee_ExtendedCombo", type = "item" },
     [20210825399] = { path = "/Game/Gameplay/Inventory/Upgrades/Powers/Melee/INV_Upgrade_Melee_GroundPoundShockwave.INV_Upgrade_Melee_GroundPoundShockwave", type = "item" },

@@ -68,6 +68,8 @@ local ft_dest_mapping = {
     },
 }
 
+M.final_boss_unlocked = false
+
 function M.UnlockBrainLevel(accessString)
     if M.colu_door_actors[accessString] ~= nil then
        M.colu_door_actors[accessString] = true 

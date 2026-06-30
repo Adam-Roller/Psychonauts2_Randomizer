@@ -2,7 +2,19 @@ local UEHelpers = require("UEHelpers")
 
 local M = {}
 
+M.ability_enum_to_loc = {
+    [0] = "/Game/Gameplay/Inventory/Powers/POWERKEY_Telekinesis.POWERKEY_Telekinesis",
+    [1] = "/Game/Gameplay/Inventory/Powers/POWERKEY_PsiBlast.POWERKEY_PsiBlast",
+    [2] = "/Game/Gameplay/Inventory/Powers/POWERKEY_Pyrokinesis.POWERKEY_Pyrokinesis",
+    [3] = "/Game/Gameplay/Inventory/Powers/POWERKEY_Clairvoyance.POWERKEY_Clairvoyance",
+    [4] = "/Game/Gameplay/Inventory/Powers/POWERKEY_MConn.POWERKEY_MConn",
+    [5] = "/Game/Gameplay/Inventory/Powers/POWERKEY_TimeBubble.POWERKEY_TimeBubble",
+    [7] = "/Game/Gameplay/Inventory/Powers/POWERKEY_Clone.POWERKEY_Clone",
+    [15] = "/Game/Gameplay/Inventory/Powers/POWERKEY_Levitation.POWERKEY_Levitation",
+}
+
 M.item_to_allow = nil
+M.mental_connection_unlocked = false
 
 function M.AddToRaz(itemPath, amount)
     --- @class UP2BlueprintLibrary
@@ -14,14 +26,27 @@ function M.AddToRaz(itemPath, amount)
     local persistent_level = UEHelpers:GetPersistentLevel()
     local level_script_actor = persistent_level.LevelScriptActor
 
+    if itemPath == "/Game/Gameplay/Inventory/Powers/POWERKEY_MConn.POWERKEY_MConn" then
+        M.mental_connection_unlocked = true
+    end
+
     --- @class UInventoryItem
     local item_to_add = StaticFindObject(itemPath)
-    if not item_to_add:IsValid() then
+    if item_to_add:IsValid() then
+        M.item_to_allow = item_to_add:GetFullName()
+        blueprint_library:AddToRazInventory(level_script_actor, item_to_add, amount)
+    else
         print(string.format("No object found with name: %s\n", itemPath))
-        return
+        print("Attempting to load item...\n")
+
+        local kismet_system = UEHelpers.GetKismetSystemLibrary()
+        local soft_obj = kismet_system:Conv_SoftObjPathToSoftObjRef(kismet_system:MakeSoftObjectPath(itemPath))
+        --- @class UInventoryItem
+        local loaded_obj = kismet_system:LoadAsset_Blocking(soft_obj)
+        M.item_to_allow = loaded_obj:GetFullName()
+        blueprint_library:AddToRazInventory(level_script_actor, loaded_obj, amount)
     end
-    M.item_to_allow = item_to_add:GetFullName()
-    blueprint_library:AddToRazInventory(level_script_actor, item_to_add, amount)
+
 end
 
 function M.RemoveFromRaz(itemPath, amount)

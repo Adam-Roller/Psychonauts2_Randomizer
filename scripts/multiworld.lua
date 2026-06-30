@@ -145,6 +145,8 @@ function Multiworld:ReceiveItem(item_id)
         items.AddToRaz(item.path, 1)
     elseif item.type == "hub" then
         levels.UnlockHubLevel(item.path)
+    elseif item.type == "boss" then
+        levels.final_boss_unlocked = true
     else
         print("[AP ERROR] Unknown Item ID received: " .. tostring(item_id) .. "\n")
     end

@@ -7,8 +7,6 @@ local Multiworld = require("multiworld")
 print("[PS2RandomizerMod] Mod Loaded\n")
 
 local new_game = false
-local mental_connection_unlocked = false
-local final_boss_unlocked = false
 
 -- HQIN_FT destinations are used to unlock fast travel destinations
 local ft_destinations = {
@@ -81,9 +79,10 @@ RegisterBeginPlayPreHook(function(Actor)
 
             -- Add Fast Travel Key
             items.AddToRaz("/Game/Gameplay/Inventory/FastTravel/INV_FTKey.INV_FTKey", 1)
-
             -- Add Ability radial
             items.AddToRaz("/Game/Characters/Raz/Abilities/INV_AbilityRadialMenu.INV_AbilityRadialMenu", 1)
+            -- Add Smelling Salts
+            items.AddToRaz("/Game/Gameplay/Inventory/INV_SmellingSalts.INV_SmellingSalts", 1)
 
             ------- Start Sidequests -----------
             -- Scavenger Hunt
@@ -95,11 +94,11 @@ RegisterBeginPlayPreHook(function(Actor)
         end
 
         -- Before fully unlocking, Add Mental Connection power when in COLU, remove when leaving
-        if not mental_connection_unlocked then
+        if not items.mental_connection_unlocked then
             if actor_class_name == "COLU_C" then
                 items.AddToRaz("/Game/Gameplay/Inventory/Powers/POWERKEY_MConn.POWERKEY_MConn", 1)
             else
-                --items.RemoveFromRaz("/Game/Gameplay/Inventory/Powers/POWERKEY_MConn.POWERKEY_MConn", 1)
+                items.RemoveFromRaz("/Game/Gameplay/Inventory/Powers/POWERKEY_MConn.POWERKEY_MConn", 1)
             end
         end
 
@@ -224,7 +223,7 @@ function HookedP2OpenLevel(Context, WorldContextParam, LevelParam, CutscenesToPr
         local DefaultStartSoft = CreateSoftObject("/Game/Gameplay/StartPoints/HQIN/START_HQIN_SashaLabTumbler.START_HQIN_SashaLabTumbler")
         LevelParam:Set(HQINMapSoft)
         DestinationPlayerStartParam:Set(DefaultStartSoft)
-    elseif final_boss_unlocked and player_start == "/Game/Gameplay/StartPoints/QUAR/START_QUAR_FromHQIN.START_QUAR_FromHQIN" then
+    elseif levels.final_boss_unlocked and player_start == "/Game/Gameplay/StartPoints/QUAR/START_QUAR_FromHQIN.START_QUAR_FromHQIN" then
         local QAEX_soft = CreateSoftObject("/Game/Maps/QAEX/QAEX.QAEX")
         local boss_start_soft = CreateSoftObject("/Game/Gameplay/StartPoints/QAEX/START_QAEX_FromHUB2.START_QAEX_FromHUB2")
         LevelParam:Set(QAEX_soft)
@@ -285,16 +284,28 @@ local function HandleCollectable(ContextWrapper)
     end
 end
 
+local function HandleAbilityUnlock(Context, WorldContext, Ability)
+    print(string.format("Detecting ability unlock of: %s", Ability:get()))
+    -- Send the AP location associated with this ability
+    local location_id = AP_Loc_Map[items.ability_enum_to_loc[Ability:get()]]
+    if location_id then
+        print("[AP] Valid Ability location check picked up! Sending to server: " .. tostring(location_id) .. "\n")
+        Multiworld:SendLocationCheck(location_id)
+    end
+    -- Set unlocked ability to "None" (18)
+    Ability:set(18)
+end
+
 RegisterHook("/Script/Psychonauts2.CoCollectable:OnCollectablePickedUp", function(ContextWrapper)
     return HandleCollectable(ContextWrapper)
 end)
-
 RegisterHook("/Script/Psychonauts2.CoCollectable:Collect", function(ContextWrapper)
     return HandleCollectable(ContextWrapper)
 end)
 RegisterHook("/Script/Psychonauts2.P2BlueprintLibrary:P2OpenLevel", HookedP2OpenLevel)
 RegisterHook("/Script/Psychonauts2.P2BlueprintLibrary:IsQuestCompleteNew", HookedIsQuestCompleteNew)
 RegisterHook("/Script/Psychonauts2.P2UpgradeManager:OnInventoryItemAmountChanged", function(_) end, HookedOnInventoryItemAmountChangedPost)
+RegisterHook("/Script/Psychonauts2.P2BlueprintLibrary:UnlockRazAbility", HandleAbilityUnlock)
 
 -- Keybinds
 ----------------
